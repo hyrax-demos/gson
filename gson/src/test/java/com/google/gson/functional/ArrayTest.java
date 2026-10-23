@@ -22,6 +22,8 @@ import static org.junit.Assert.assertThrows;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonParseException;
+import com.google.gson.JsonSyntaxException;
+import com.google.gson.TypeAdapter;
 import com.google.gson.common.TestTypes.BagOfPrimitives;
 import com.google.gson.common.TestTypes.ClassWithObjects;
 import com.google.gson.reflect.TypeToken;
@@ -65,6 +67,23 @@ public class ArrayTest {
     // Gson should not deserialize array elements with missing ','
     var e = assertThrows(JsonParseException.class, () -> gson.fromJson(json, int[].class));
     assertThat(e).hasCauseThat().hasMessageThat().startsWith("Unterminated array");
+  }
+
+  /** Deserializes a JSON array with a null second element into int[], and into Integer[]. */
+  @Test
+  public void testNullElementInPrimitiveArrayDeserialization() {
+    String json = "[1,null,3]";
+    var e = assertThrows(JsonSyntaxException.class, () -> gson.fromJson(json, int[].class));
+    assertThat(e).hasMessageThat().isEqualTo("null is not a valid int array element; at path $[1]");
+
+    // The adapter used directly, without Gson.fromJson wrapping its exceptions
+    TypeAdapter<int[]> adapter = gson.getAdapter(int[].class);
+    e = assertThrows(JsonSyntaxException.class, () -> adapter.fromJson(json));
+    assertThat(e).hasMessageThat().isEqualTo("null is not a valid int array element; at path $[1]");
+
+    // Null elements are still accepted for arrays of a non-primitive component type
+    Integer[] boxed = gson.fromJson(json, Integer[].class);
+    assertThat(boxed).asList().containsExactly(1, null, 3).inOrder();
   }
 
   @Test
