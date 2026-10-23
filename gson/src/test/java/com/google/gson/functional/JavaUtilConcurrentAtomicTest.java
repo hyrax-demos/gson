@@ -132,8 +132,7 @@ public class JavaUtilConcurrentAtomicTest {
   public void testAtomicIntegerArrayWithNullElement() {
     JsonSyntaxException e =
         assertThrows(
-            JsonSyntaxException.class,
-            () -> gson.fromJson("[1,null,3]", AtomicIntegerArray.class));
+            JsonSyntaxException.class, () -> gson.fromJson("[1,null,3]", AtomicIntegerArray.class));
     assertThat(e)
         .hasMessageThat()
         .isEqualTo("null is not a valid AtomicIntegerArray element; at path $[1]");

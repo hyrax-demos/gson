@@ -74,16 +74,12 @@ public class ArrayTest {
   public void testNullElementInPrimitiveArrayDeserialization() {
     String json = "[1,null,3]";
     var e = assertThrows(JsonSyntaxException.class, () -> gson.fromJson(json, int[].class));
-    assertThat(e)
-        .hasMessageThat()
-        .isEqualTo("null is not a valid int array element; at path $[1]");
+    assertThat(e).hasMessageThat().isEqualTo("null is not a valid int array element; at path $[1]");
 
     // The adapter used directly, without Gson.fromJson wrapping its exceptions
     TypeAdapter<int[]> adapter = gson.getAdapter(int[].class);
     e = assertThrows(JsonSyntaxException.class, () -> adapter.fromJson(json));
-    assertThat(e)
-        .hasMessageThat()
-        .isEqualTo("null is not a valid int array element; at path $[1]");
+    assertThat(e).hasMessageThat().isEqualTo("null is not a valid int array element; at path $[1]");
 
     // Null elements are still accepted for arrays of a non-primitive component type
     Integer[] boxed = gson.fromJson(json, Integer[].class);
