@@ -125,4 +125,26 @@ public class JavaUtilConcurrentAtomicTest {
         .hasMessageThat()
         .isEqualTo("null is not a valid AtomicLongArray element; at path $[1]");
   }
+
+  /**
+   * Reads an array whose middle element is a JSON null, both through {@code Gson.fromJson} and
+   * directly through the adapter returned by {@code Gson.getAdapter}.
+   */
+  @Test
+  public void testAtomicIntegerArrayWithNullElement() {
+    JsonSyntaxException e =
+        assertThrows(
+            JsonSyntaxException.class, () -> gson.fromJson("[1,null,3]", AtomicIntegerArray.class));
+    assertThat(e)
+        .hasMessageThat()
+        .isEqualTo("null is not a valid AtomicIntegerArray element; at path $[1]");
+
+    e =
+        assertThrows(
+            JsonSyntaxException.class,
+            () -> gson.getAdapter(AtomicIntegerArray.class).fromJson("[1,null,3]"));
+    assertThat(e)
+        .hasMessageThat()
+        .isEqualTo("null is not a valid AtomicIntegerArray element; at path $[1]");
+  }
 }
