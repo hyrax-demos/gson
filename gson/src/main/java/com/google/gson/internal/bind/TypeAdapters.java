@@ -47,7 +47,6 @@ import java.util.GregorianCalendar;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
-import java.util.StringTokenizer;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -942,26 +941,15 @@ public final class TypeAdapters {
             return null;
           }
           String locale = in.nextString();
-          StringTokenizer tokenizer = new StringTokenizer(locale, "_");
-          String language = null;
-          String country = null;
-          String variant = null;
-          if (tokenizer.hasMoreElements()) {
-            language = tokenizer.nextToken();
-          }
-          if (tokenizer.hasMoreElements()) {
-            country = tokenizer.nextToken();
-          }
-          if (tokenizer.hasMoreElements()) {
-            variant = tokenizer.nextToken();
-          }
-          if (country == null && variant == null) {
-            return new Locale(language);
-          } else if (variant == null) {
-            return new Locale(language, country);
-          } else {
-            return new Locale(language, country, variant);
-          }
+          // Locale.toString() joins language, country and variant with '_' and leaves empty parts
+          // empty (e.g. "" for Locale.ROOT, "_US", "de__POSIX"), so keep empty tokens here.
+          // Any token after the third is ignored; script and extension suffixes (e.g. "_#Latn")
+          // are not specially handled.
+          String[] tokens = locale.split("_", -1);
+          String language = tokens[0];
+          String country = tokens.length > 1 ? tokens[1] : "";
+          String variant = tokens.length > 2 ? tokens[2] : "";
+          return new Locale(language, country, variant);
         }
 
         @Override
