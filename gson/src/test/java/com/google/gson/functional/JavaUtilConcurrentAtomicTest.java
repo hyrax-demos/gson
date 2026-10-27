@@ -88,6 +88,17 @@ public class JavaUtilConcurrentAtomicTest {
     assertThat(json).isEqualTo("[10,13,14]");
   }
 
+  /** Feeds an array whose second element is a JSON null, which must be rejected. */
+  @Test
+  public void testAtomicIntegerArrayWithNullElement() {
+    JsonSyntaxException e =
+        assertThrows(
+            JsonSyntaxException.class, () -> gson.fromJson("[1,null,3]", AtomicIntegerArray.class));
+    assertThat(e)
+        .hasMessageThat()
+        .isEqualTo("null is not a valid AtomicIntegerArray element; at path $[1]");
+  }
+
   @Test
   public void testAtomicLongArray() {
     AtomicLongArray target = gson.fromJson("[10, 13, 14]", AtomicLongArray.class);

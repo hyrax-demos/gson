@@ -22,6 +22,7 @@ import static org.junit.Assert.assertThrows;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonParseException;
+import com.google.gson.JsonSyntaxException;
 import com.google.gson.common.TestTypes.BagOfPrimitives;
 import com.google.gson.common.TestTypes.ClassWithObjects;
 import com.google.gson.reflect.TypeToken;
@@ -57,6 +58,14 @@ public class ArrayTest {
     int[] expected = {1, 2, 3, 4, 5, 6, 7, 8, 9};
     int[] actual = gson.fromJson("[1,2,3,4,5,6,7,8,9]", int[].class);
     assertThat(actual).isEqualTo(expected);
+  }
+
+  /** Reads an int[] whose middle element is a JSON null, which must be rejected. */
+  @Test
+  public void testArrayOfIntsWithNullElementDeserialization() {
+    JsonSyntaxException e =
+        assertThrows(JsonSyntaxException.class, () -> gson.fromJson("[1,null,3]", int[].class));
+    assertThat(e).hasMessageThat().isEqualTo("null is not a valid int[] element; at path $[1]");
   }
 
   @Test
