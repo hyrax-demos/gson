@@ -47,7 +47,6 @@ import java.util.GregorianCalendar;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
-import java.util.StringTokenizer;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -942,26 +941,19 @@ public final class TypeAdapters {
             return null;
           }
           String locale = in.nextString();
-          StringTokenizer tokenizer = new StringTokenizer(locale, "_");
-          String language = null;
-          String country = null;
-          String variant = null;
-          if (tokenizer.hasMoreElements()) {
-            language = tokenizer.nextToken();
+          // Split on the first two '_' only and keep empty parts, so that the output of
+          // Locale.toString() such as "" (Locale.ROOT), "_US" or "en__POSIX" reads back equal.
+          int first = locale.indexOf('_');
+          if (first == -1) {
+            return new Locale(locale);
           }
-          if (tokenizer.hasMoreElements()) {
-            country = tokenizer.nextToken();
+          String language = locale.substring(0, first);
+          int second = locale.indexOf('_', first + 1);
+          if (second == -1) {
+            return new Locale(language, locale.substring(first + 1));
           }
-          if (tokenizer.hasMoreElements()) {
-            variant = tokenizer.nextToken();
-          }
-          if (country == null && variant == null) {
-            return new Locale(language);
-          } else if (variant == null) {
-            return new Locale(language, country);
-          } else {
-            return new Locale(language, country, variant);
-          }
+          return new Locale(
+              language, locale.substring(first + 1, second), locale.substring(second + 1));
         }
 
         @Override
