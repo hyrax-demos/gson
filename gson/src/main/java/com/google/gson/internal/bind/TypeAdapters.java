@@ -344,12 +344,13 @@ public final class TypeAdapters {
           List<Integer> list = new ArrayList<>();
           in.beginArray();
           while (in.hasNext()) {
-            try {
-              int integer = in.nextInt();
-              list.add(integer);
-            } catch (NumberFormatException e) {
-              throw new JsonSyntaxException(e);
+            Number value = INTEGER.read(in);
+            if (value == null) {
+              throw new JsonSyntaxException(
+                  "null is not a valid AtomicIntegerArray element; at path "
+                      + in.getPreviousPath());
             }
+            list.add(value.intValue());
           }
           in.endArray();
           int length = list.size();
@@ -871,6 +872,13 @@ public final class TypeAdapters {
         String name = in.nextName();
         int index = fields.indexOf(name);
         if (index >= 0) {
+          if (in.peek() == JsonToken.NULL) {
+            throw new JsonSyntaxException(
+                "null is not a valid value for field '"
+                    + name
+                    + "'; at path "
+                    + in.getPreviousPath());
+          }
           values[index] = in.nextLong();
         } else {
           in.skipValue();

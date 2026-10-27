@@ -22,6 +22,7 @@ import static org.junit.Assert.assertThrows;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonParseException;
+import com.google.gson.JsonSyntaxException;
 import com.google.gson.common.TestTypes.BagOfPrimitives;
 import com.google.gson.common.TestTypes.ClassWithObjects;
 import com.google.gson.reflect.TypeToken;
@@ -65,6 +66,27 @@ public class ArrayTest {
     // Gson should not deserialize array elements with missing ','
     var e = assertThrows(JsonParseException.class, () -> gson.fromJson(json, int[].class));
     assertThat(e).hasCauseThat().hasMessageThat().startsWith("Unterminated array");
+  }
+
+  /** Reads arrays containing a JSON null element into primitive arrays. */
+  @Test
+  public void testPrimitiveArrayWithNullElementDeserialization() {
+    var e = assertThrows(JsonSyntaxException.class, () -> gson.fromJson("[1,null,3]", int[].class));
+    assertThat(e).hasMessageThat().isEqualTo("null is not a valid int[] element; at path $[1]");
+
+    e = assertThrows(JsonSyntaxException.class, () -> gson.fromJson("[1,null,3]", long[].class));
+    assertThat(e).hasMessageThat().isEqualTo("null is not a valid long[] element; at path $[1]");
+
+    e =
+        assertThrows(
+            JsonSyntaxException.class, () -> gson.fromJson("[true,null]", boolean[].class));
+    assertThat(e).hasMessageThat().isEqualTo("null is not a valid boolean[] element; at path $[1]");
+  }
+
+  @Test
+  public void testWrapperArrayWithNullElementDeserialization() {
+    Integer[] array = gson.fromJson("[1,null,3]", Integer[].class);
+    assertThat(array).asList().containsExactly(1, null, 3).inOrder();
   }
 
   @Test

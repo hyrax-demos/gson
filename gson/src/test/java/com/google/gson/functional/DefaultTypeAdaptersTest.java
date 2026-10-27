@@ -552,6 +552,17 @@ public class DefaultTypeAdaptersTest {
     }
   }
 
+  /** Reads a Calendar object whose "year" field is JSON null, through the adapter directly. */
+  @Test
+  public void testCalendarDeserializationWithNullField() {
+    TypeAdapter<Calendar> adapter = gson.getAdapter(Calendar.class);
+    JsonSyntaxException e =
+        assertThrows(JsonSyntaxException.class, () -> adapter.fromJson("{\"year\":null}"));
+    assertThat(e)
+        .hasMessageThat()
+        .isEqualTo("null is not a valid value for field 'year'; at path $.year");
+  }
+
   /** Uses {@link GsonBuilder#setDateFormat(int, int)} */
   @Test
   public void testDateSerializationWithStyle() {
@@ -968,6 +979,39 @@ public class DefaultTypeAdaptersTest {
     ZoneId zoneId = ZoneId.of("Asia/Shanghai");
     String json = "{\"id\":\"Asia/Shanghai\"}";
     roundTrip(zoneId, ZoneId.class, json);
+  }
+
+  /** Reads a Duration object whose "nanos" field is JSON null, through the adapter directly. */
+  @Test
+  public void testJavaTimeDurationWithNullField() {
+    TypeAdapter<Duration> adapter = gson.getAdapter(Duration.class);
+    JsonSyntaxException e =
+        assertThrows(
+            JsonSyntaxException.class, () -> adapter.fromJson("{\"seconds\":1,\"nanos\":null}"));
+    assertThat(e)
+        .hasMessageThat()
+        .isEqualTo("null is not a valid value for field 'nanos'; at path $.nanos");
+  }
+
+  /**
+   * Reads ZoneOffset and ZoneId objects whose "totalSeconds" or "id" field is JSON null, through
+   * the adapters directly.
+   */
+  @Test
+  public void testJavaTimeZoneIdWithNullField() {
+    TypeAdapter<ZoneOffset> zoneOffsetAdapter = gson.getAdapter(ZoneOffset.class);
+    JsonSyntaxException e =
+        assertThrows(
+            JsonSyntaxException.class, () -> zoneOffsetAdapter.fromJson("{\"totalSeconds\":null}"));
+    assertThat(e)
+        .hasMessageThat()
+        .isEqualTo("null is not a valid value for field 'totalSeconds'; at path $.totalSeconds");
+
+    TypeAdapter<ZoneId> zoneIdAdapter = gson.getAdapter(ZoneId.class);
+    e = assertThrows(JsonSyntaxException.class, () -> zoneIdAdapter.fromJson("{\"id\":null}"));
+    assertThat(e)
+        .hasMessageThat()
+        .isEqualTo("null is not a valid value for field 'id'; at path $.id");
   }
 
   @Test

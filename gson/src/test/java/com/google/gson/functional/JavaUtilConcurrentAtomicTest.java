@@ -23,6 +23,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonSyntaxException;
 import com.google.gson.LongSerializationPolicy;
+import com.google.gson.TypeAdapter;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicIntegerArray;
@@ -124,5 +125,35 @@ public class JavaUtilConcurrentAtomicTest {
     assertThat(e)
         .hasMessageThat()
         .isEqualTo("null is not a valid AtomicLongArray element; at path $[1]");
+  }
+
+  /** Reads a three-element array whose middle element is JSON null into an AtomicIntegerArray. */
+  @Test
+  public void testAtomicIntegerArrayWithNullElement() {
+    JsonSyntaxException e =
+        assertThrows(
+            JsonSyntaxException.class, () -> gson.fromJson("[1,null,3]", AtomicIntegerArray.class));
+    assertThat(e)
+        .hasMessageThat()
+        .isEqualTo("null is not a valid AtomicIntegerArray element; at path $[1]");
+  }
+
+  /** Reads an array with a null element through the adapter directly, without Gson.fromJson. */
+  @Test
+  public void testAtomicIntegerArrayWithNullElementFromAdapter() {
+    TypeAdapter<AtomicIntegerArray> adapter = gson.getAdapter(AtomicIntegerArray.class);
+    JsonSyntaxException e =
+        assertThrows(JsonSyntaxException.class, () -> adapter.fromJson("[1,null,3]"));
+    assertThat(e)
+        .hasMessageThat()
+        .isEqualTo("null is not a valid AtomicIntegerArray element; at path $[1]");
+  }
+
+  @Test
+  public void testAtomicIntegerArrayWithNonIntegerElement() {
+    JsonSyntaxException e =
+        assertThrows(
+            JsonSyntaxException.class, () -> gson.fromJson("[1,2.5]", AtomicIntegerArray.class));
+    assertThat(e).hasCauseThat().isInstanceOf(NumberFormatException.class);
   }
 }

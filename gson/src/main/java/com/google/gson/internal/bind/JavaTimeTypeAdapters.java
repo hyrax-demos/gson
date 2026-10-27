@@ -300,9 +300,11 @@ final class JavaTimeTypeAdapters implements TypeAdapters.FactorySupplier {
             String name = in.nextName();
             switch (name) {
               case "id":
+                requireNonNullValue(name, in);
                 id = in.nextString();
                 break;
               case "totalSeconds":
+                requireNonNullValue(name, in);
                 totalSeconds = in.nextInt();
                 break;
               default:
@@ -445,5 +447,15 @@ final class JavaTimeTypeAdapters implements TypeAdapters.FactorySupplier {
           "Missing " + fieldName + " field; at path " + reader.getPreviousPath());
     }
     return field;
+  }
+
+  private static void requireNonNullValue(String fieldName, JsonReader reader) throws IOException {
+    if (reader.peek() == JsonToken.NULL) {
+      throw new JsonSyntaxException(
+          "null is not a valid value for field '"
+              + fieldName
+              + "'; at path "
+              + reader.getPreviousPath());
+    }
   }
 }

@@ -217,16 +217,27 @@ public enum LegacyProtoTypeAdapterFactory implements TypeAdapterFactory {
         String fieldName = readFieldName(in);
         Matcher matcher = BIT_FIELD_PATTERN.matcher(fieldName);
         if (matcher.matches()) {
-          int shift = Integer.parseInt(matcher.group(1)) * 32;
-          int mask = in.nextInt();
-          presenceBitmask = presenceBitmask.or(BigInteger.valueOf(mask).shiftLeft(shift));
+          if (in.peek() == JsonToken.NULL) {
+            // RTAF skips a null value for the primitive `int bitFieldN_` field.
+            in.nextNull();
+          } else {
+            int shift = Integer.parseInt(matcher.group(1)) * 32;
+            int mask = in.nextInt();
+            presenceBitmask = presenceBitmask.or(BigInteger.valueOf(mask).shiftLeft(shift));
+          }
         } else {
           if (fieldName.endsWith("_")) {
             fieldName = fieldName.substring(0, fieldName.length() - 1);
           }
           FieldDescriptor fieldDescriptor = javaNameToFieldDescriptor.get(fieldName);
           if (fieldDescriptor != null) {
-            builder.setField(fieldDescriptor, readField(in, builder, fieldDescriptor));
+            if (in.peek() == JsonToken.NULL) {
+              // RTAF skips a null value for a primitive field and stores null in an object field.
+              // A proto field cannot hold null, so here a null value is skipped for every field.
+              in.nextNull();
+            } else {
+              builder.setField(fieldDescriptor, readField(in, builder, fieldDescriptor));
+            }
           } else if (!readOneofField(fieldName, oneofNameToCaseNumber, oneofNameToValue, in)) {
             in.skipValue();
           }
@@ -360,6 +371,7 @@ public enum LegacyProtoTypeAdapterFactory implements TypeAdapterFactory {
       List<Object> result = new ArrayList<>();
       in.beginArray();
       while (in.hasNext()) {
+        requireNonNullElement(in, fieldDescriptor);
         result.add(readSingleFieldValue(in, fieldDescriptor));
       }
       in.endArray();
@@ -374,12 +386,25 @@ public enum LegacyProtoTypeAdapterFactory implements TypeAdapterFactory {
         List<Message> result = new ArrayList<>();
         in.beginArray();
         while (in.hasNext()) {
+          requireNonNullElement(in, fieldDescriptor);
           result.add(messageClass.cast(nestedAdapter.read(in)));
         }
         in.endArray();
         return result;
       } else {
         return nestedAdapter.read(in);
+      }
+    }
+
+    // A repeated proto field cannot hold a null element, so reject one before reading it.
+    private static void requireNonNullElement(JsonReader in, FieldDescriptor fieldDescriptor)
+        throws IOException {
+      if (in.peek() == JsonToken.NULL) {
+        throw new JsonSyntaxException(
+            "null is not a valid element of repeated field '"
+                + fieldDescriptor.getName()
+                + "'; at path "
+                + in.getPath());
       }
     }
 
@@ -394,6 +419,10 @@ public enum LegacyProtoTypeAdapterFactory implements TypeAdapterFactory {
         String fieldName = readFieldName(in);
         switch (fieldName) {
           case "bytes":
+            if (in.peek() == JsonToken.NULL) {
+              throw new JsonSyntaxException(
+                  "null is not a valid ByteString bytes value; at path " + in.getPath());
+            }
             byteString = ByteString.copyFrom((byte[]) gson.fromJson(in, byte[].class));
             break;
           case "hash":
