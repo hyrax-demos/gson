@@ -32,6 +32,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
+import com.google.gson.JsonSyntaxException;
 import com.google.gson.TypeAdapter;
 import com.google.gson.protobuf.LegacyProtoTypeAdapterFactory;
 import com.google.gson.protobuf.TestAllTypes;
@@ -435,6 +436,74 @@ public final class LegacyProtoTypeAdapterFactoryTest {
     String json = "{\"bitField67108863_\": 1, \"optionalInt32_\": 42}";
     TestAllTypes result = GSON_WITH_LEGACY_ADAPTER.fromJson(json, TestAllTypes.class);
     assertThat(result.getOptionalInt32()).isEqualTo(42);
+  }
+
+  /**
+   * Reads JSON where singular fields of several types (int32, int64, uint32, bool, float, double,
+   * enum, string, bytes, message, and an explicit-presence int32) have the value null, and checks
+   * that those fields are left unset while the non-null field after them is still read.
+   */
+  @Test
+  public void deserialize_nullSingularFields_areSkipped() {
+    String json =
+        "{\"optionalInt32_\":null,\"optionalInt64_\":null,\"optionalUint32_\":null,"
+            + "\"optionalBool_\":null,\"optionalFloat_\":null,\"optionalDouble_\":null,"
+            + "\"optionalNestedEnum_\":null,\"optionalString_\":null,\"optionalBytes_\":null,"
+            + "\"optionalNestedMessage_\":null,\"explicitPresenceInt32_\":null,"
+            + "\"optionalSint32_\":7}";
+    TestAllTypes result = GSON_WITH_LEGACY_ADAPTER.fromJson(json, TestAllTypes.class);
+    assertThat(result).isEqualTo(TestAllTypes.newBuilder().setOptionalSint32(7).build());
+  }
+
+  /** Reads JSON where the {@code bitField0_} presence mask is null, followed by a set field. */
+  @Test
+  public void deserialize_nullBitField_isSkipped() {
+    String json = "{\"bitField0_\":null,\"optionalInt32_\":42}";
+    TestAllTypes result = GSON_WITH_LEGACY_ADAPTER.fromJson(json, TestAllTypes.class);
+    assertThat(result).isEqualTo(TestAllTypes.newBuilder().setOptionalInt32(42).build());
+  }
+
+  /** Reads a repeated int32 field whose second element is null. */
+  @Test
+  public void deserialize_nullRepeatedScalarElement_throwsJsonSyntaxException() {
+    String json = "{\"repeatedInt32_\":[1,null]}";
+    var exception =
+        assertThrows(
+            JsonSyntaxException.class,
+            () -> GSON_WITH_LEGACY_ADAPTER.fromJson(json, TestAllTypes.class));
+    assertThat(exception)
+        .hasMessageThat()
+        .isEqualTo(
+            "null is not a valid element of repeated field 'repeated_int32'; at path"
+                + " $.repeatedInt32_[1]");
+  }
+
+  /** Reads a repeated message field whose only element is null. */
+  @Test
+  public void deserialize_nullRepeatedMessageElement_throwsJsonSyntaxException() {
+    String json = "{\"repeatedNestedMessage_\":[null]}";
+    var exception =
+        assertThrows(
+            JsonSyntaxException.class,
+            () -> GSON_WITH_LEGACY_ADAPTER.fromJson(json, TestAllTypes.class));
+    assertThat(exception)
+        .hasMessageThat()
+        .isEqualTo(
+            "null is not a valid element of repeated field 'repeated_nested_message'; at path"
+                + " $.repeatedNestedMessage_[0]");
+  }
+
+  /** Reads a bytes field whose ByteString object has a null {@code bytes} member. */
+  @Test
+  public void deserialize_nullByteStringBytes_throwsJsonSyntaxException() {
+    String json = "{\"optionalBytes_\":{\"bytes\":null,\"hash\":0}}";
+    var exception =
+        assertThrows(
+            JsonSyntaxException.class,
+            () -> GSON_WITH_LEGACY_ADAPTER.fromJson(json, TestAllTypes.class));
+    assertThat(exception)
+        .hasMessageThat()
+        .isEqualTo("null is not a valid ByteString bytes value; at path $.optionalBytes_.bytes");
   }
 
   private static Gson applyFieldNamingPolicy(Gson gson, FieldNamingPolicy fieldNamingPolicy) {
