@@ -348,6 +348,23 @@ public class DefaultTypeAdaptersTest {
     assertThat(locale).isEqualTo(target);
   }
 
+  /**
+   * The JDK compatibility locales ja_JP_JP and th_TH_TH get a Unicode extension, so they are
+   * written with a "_#" suffix after the variant, which must read back as an equal Locale.
+   */
+  @Test
+  public void testLocaleCompatibilityVariantWithExtensionRoundTrip() {
+    Locale japanese = new Locale("ja", "JP", "JP");
+    String json = gson.toJson(japanese);
+    assertThat(json).isEqualTo("\"ja_JP_JP_#u-ca-japanese\"");
+    assertThat(gson.fromJson(json, Locale.class)).isEqualTo(japanese);
+
+    Locale thai = new Locale("th", "TH", "TH");
+    json = gson.toJson(thai);
+    assertThat(json).isEqualTo("\"th_TH_TH_#u-nu-thai\"");
+    assertThat(gson.fromJson(json, Locale.class)).isEqualTo(thai);
+  }
+
   @Test
   public void testBigDecimalFieldSerialization() {
     ClassWithBigDecimal target = new ClassWithBigDecimal("-122.01e-21");

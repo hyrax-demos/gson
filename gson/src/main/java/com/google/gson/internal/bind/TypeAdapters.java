@@ -952,8 +952,14 @@ public final class TypeAdapters {
           if (second == -1) {
             return new Locale(language, locale.substring(first + 1));
           }
-          return new Locale(
-              language, locale.substring(first + 1, second), locale.substring(second + 1));
+          // The variant ends at a following "_#" (script / extensions), so that for example
+          // "ja_JP_JP_#u-ca-japanese" reads back as new Locale("ja", "JP", "JP").
+          int extension = locale.indexOf("_#", second + 1);
+          String variant =
+              extension == -1
+                  ? locale.substring(second + 1)
+                  : locale.substring(second + 1, extension);
+          return new Locale(language, locale.substring(first + 1, second), variant);
         }
 
         @Override
