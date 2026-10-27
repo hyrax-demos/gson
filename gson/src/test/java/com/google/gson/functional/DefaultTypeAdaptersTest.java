@@ -319,6 +319,52 @@ public class DefaultTypeAdaptersTest {
     assertThat(locale.getVariant()).isEqualTo("EURO");
   }
 
+  /** Locale.ROOT is written as an empty string, which must read back as Locale.ROOT. */
+  @Test
+  public void testLocaleRootRoundTrip() {
+    assertThat(gson.toJson(Locale.ROOT)).isEqualTo("\"\"");
+    assertThat(gson.fromJson("\"\"", Locale.class)).isEqualTo(Locale.ROOT);
+  }
+
+  /** A locale with a country but an empty language is written with a leading underscore. */
+  @Test
+  public void testLocaleCountryOnlyRoundTrip() {
+    Locale target = new Locale("", "US");
+    String json = gson.toJson(target);
+    assertThat(json).isEqualTo("\"_US\"");
+    Locale locale = gson.fromJson(json, Locale.class);
+    assertThat(locale).isEqualTo(target);
+    assertThat(locale.getLanguage()).isEqualTo("");
+    assertThat(locale.getCountry()).isEqualTo("US");
+  }
+
+  /** A locale with a variant but an empty country is written with two adjacent underscores. */
+  @Test
+  public void testLocaleLanguageVariantNoCountryRoundTrip() {
+    Locale target = new Locale("en", "", "POSIX");
+    String json = gson.toJson(target);
+    assertThat(json).isEqualTo("\"en__POSIX\"");
+    Locale locale = gson.fromJson(json, Locale.class);
+    assertThat(locale).isEqualTo(target);
+  }
+
+  /**
+   * The JDK compatibility locales ja_JP_JP and th_TH_TH get a Unicode extension, so they are
+   * written with a "_#" suffix after the variant, which must read back as an equal Locale.
+   */
+  @Test
+  public void testLocaleCompatibilityVariantWithExtensionRoundTrip() {
+    Locale japanese = new Locale("ja", "JP", "JP");
+    String json = gson.toJson(japanese);
+    assertThat(json).isEqualTo("\"ja_JP_JP_#u-ca-japanese\"");
+    assertThat(gson.fromJson(json, Locale.class)).isEqualTo(japanese);
+
+    Locale thai = new Locale("th", "TH", "TH");
+    json = gson.toJson(thai);
+    assertThat(json).isEqualTo("\"th_TH_TH_#u-nu-thai\"");
+    assertThat(gson.fromJson(json, Locale.class)).isEqualTo(thai);
+  }
+
   @Test
   public void testBigDecimalFieldSerialization() {
     ClassWithBigDecimal target = new ClassWithBigDecimal("-122.01e-21");
