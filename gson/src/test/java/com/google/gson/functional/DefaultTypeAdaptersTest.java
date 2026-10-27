@@ -340,7 +340,7 @@ public class DefaultTypeAdaptersTest {
     assertThat(locale.getCountry()).isEqualTo("US");
   }
 
-  /** A locale with a variant but no country is written with an empty country ("en__VAR"). */
+  /** A locale with a variant but no country must read back as an equal Locale. */
   @Test
   public void testLocaleLanguageVariantNoCountryRoundTrip() {
     Locale target = new Locale("en", "", "VAR");
