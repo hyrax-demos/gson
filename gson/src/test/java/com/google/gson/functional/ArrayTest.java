@@ -68,7 +68,7 @@ public class ArrayTest {
     assertThat(e).hasCauseThat().hasMessageThat().startsWith("Unterminated array");
   }
 
-  /** Reads a three-element array whose middle element is JSON null into primitive arrays. */
+  /** Reads arrays containing a JSON null element into primitive arrays. */
   @Test
   public void testPrimitiveArrayWithNullElementDeserialization() {
     var e = assertThrows(JsonSyntaxException.class, () -> gson.fromJson("[1,null,3]", int[].class));

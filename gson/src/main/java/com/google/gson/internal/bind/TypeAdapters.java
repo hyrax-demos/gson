@@ -872,6 +872,13 @@ public final class TypeAdapters {
         String name = in.nextName();
         int index = fields.indexOf(name);
         if (index >= 0) {
+          if (in.peek() == JsonToken.NULL) {
+            throw new JsonSyntaxException(
+                "null is not a valid value for field '"
+                    + name
+                    + "'; at path "
+                    + in.getPreviousPath());
+          }
           values[index] = in.nextLong();
         } else {
           in.skipValue();
