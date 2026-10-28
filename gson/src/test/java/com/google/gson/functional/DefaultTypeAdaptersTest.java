@@ -319,6 +319,35 @@ public class DefaultTypeAdaptersTest {
     assertThat(locale.getVariant()).isEqualTo("EURO");
   }
 
+  /** Uses Locale.ROOT, whose toString() is the empty string. */
+  @Test
+  public void testLocaleRootRoundTrip() {
+    String json = gson.toJson(Locale.ROOT);
+    assertThat(json).isEqualTo("\"\"");
+    assertThat(gson.fromJson(json, Locale.class)).isEqualTo(Locale.ROOT);
+  }
+
+  /** Uses a locale with an empty language and only a country, which serializes as "_US". */
+  @Test
+  public void testLocaleCountryOnlyRoundTrip() {
+    Locale target = new Locale("", "US");
+    String json = gson.toJson(target);
+    assertThat(json).isEqualTo("\"_US\"");
+    Locale locale = gson.fromJson(json, Locale.class);
+    assertThat(locale).isEqualTo(target);
+    assertThat(locale.getLanguage()).isEmpty();
+    assertThat(locale.getCountry()).isEqualTo("US");
+  }
+
+  /** Uses a locale with language and variant but no country, serialized as "en__POSIX". */
+  @Test
+  public void testLocaleLanguageVariantWithoutCountryRoundTrip() {
+    Locale target = new Locale("en", "", "POSIX");
+    String json = gson.toJson(target);
+    assertThat(json).isEqualTo("\"en__POSIX\"");
+    assertThat(gson.fromJson(json, Locale.class)).isEqualTo(target);
+  }
+
   @Test
   public void testBigDecimalFieldSerialization() {
     ClassWithBigDecimal target = new ClassWithBigDecimal("-122.01e-21");
