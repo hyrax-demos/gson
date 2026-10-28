@@ -319,6 +319,105 @@ public class DefaultTypeAdaptersTest {
     assertThat(locale.getVariant()).isEqualTo("EURO");
   }
 
+  /** Uses Locale.ROOT, whose toString() is the empty string. */
+  @Test
+  public void testLocaleRootRoundTrip() {
+    String json = gson.toJson(Locale.ROOT);
+    assertThat(json).isEqualTo("\"\"");
+    assertThat(gson.fromJson(json, Locale.class)).isEqualTo(Locale.ROOT);
+  }
+
+  /** Uses a locale with an empty language and only a country, which serializes as "_US". */
+  @Test
+  public void testLocaleCountryOnlyRoundTrip() {
+    Locale target = new Locale("", "US");
+    String json = gson.toJson(target);
+    assertThat(json).isEqualTo("\"_US\"");
+    Locale locale = gson.fromJson(json, Locale.class);
+    assertThat(locale).isEqualTo(target);
+    assertThat(locale.getLanguage()).isEmpty();
+    assertThat(locale.getCountry()).isEqualTo("US");
+  }
+
+  /** Uses a locale with language and variant but no country, serialized as "en__POSIX". */
+  @Test
+  public void testLocaleLanguageVariantWithoutCountryRoundTrip() {
+    Locale target = new Locale("en", "", "POSIX");
+    String json = gson.toJson(target);
+    assertThat(json).isEqualTo("\"en__POSIX\"");
+    assertThat(gson.fromJson(json, Locale.class)).isEqualTo(target);
+  }
+
+  /**
+   * Uses the JDK's special locale ja_JP_JP, whose toString() has a "_#u-ca-japanese" suffix after
+   * the variant.
+   */
+  @Test
+  public void testLocaleJapaneseImperialRoundTrip() {
+    Locale target = new Locale("ja", "JP", "JP");
+    String json = gson.toJson(target);
+    assertThat(json).isEqualTo("\"ja_JP_JP_#u-ca-japanese\"");
+    Locale locale = gson.fromJson(json, Locale.class);
+    assertThat(locale).isEqualTo(target);
+    assertThat(locale.getVariant()).isEqualTo("JP");
+  }
+
+  /**
+   * Uses the JDK's special locale th_TH_TH, whose toString() has a "_#u-nu-thai" suffix after the
+   * variant.
+   */
+  @Test
+  public void testLocaleThaiDigitsRoundTrip() {
+    Locale target = new Locale("th", "TH", "TH");
+    String json = gson.toJson(target);
+    assertThat(json).isEqualTo("\"th_TH_TH_#u-nu-thai\"");
+    Locale locale = gson.fromJson(json, Locale.class);
+    assertThat(locale).isEqualTo(target);
+    assertThat(locale.getVariant()).isEqualTo("TH");
+  }
+
+  /** Uses a locale with a script, zh-Hant-TW, which serializes as "zh_TW_#Hant". */
+  @Test
+  public void testLocaleWithScriptRoundTrip() {
+    Locale target = Locale.forLanguageTag("zh-Hant-TW");
+    String json = gson.toJson(target);
+    assertThat(json).isEqualTo("\"zh_TW_#Hant\"");
+    Locale locale = gson.fromJson(json, Locale.class);
+    assertThat(locale).isEqualTo(target);
+    assertThat(locale.getScript()).isEqualTo("Hant");
+  }
+
+  /** Uses a locale with only a Unicode extension, which serializes as "en_US_#u-ca-buddhist". */
+  @Test
+  public void testLocaleWithExtensionRoundTrip() {
+    Locale target = Locale.forLanguageTag("en-US-u-ca-buddhist");
+    String json = gson.toJson(target);
+    assertThat(json).isEqualTo("\"en_US_#u-ca-buddhist\"");
+    Locale locale = gson.fromJson(json, Locale.class);
+    assertThat(locale).isEqualTo(target);
+    assertThat(locale.getUnicodeLocaleType("ca")).isEqualTo("buddhist");
+  }
+
+  /**
+   * Uses a locale with a script and two extensions, which serializes as
+   * "sr_RS_#Latn_a-foo-u-nu-latn".
+   */
+  @Test
+  public void testLocaleWithScriptAndExtensionsRoundTrip() {
+    Locale target = Locale.forLanguageTag("sr-Latn-RS-a-foo-u-nu-latn");
+    String json = gson.toJson(target);
+    assertThat(json).isEqualTo("\"sr_RS_#Latn_a-foo-u-nu-latn\"");
+    assertThat(gson.fromJson(json, Locale.class)).isEqualTo(target);
+  }
+
+  /** Uses a script/extensions suffix that is not well-formed, "en_US_#u". */
+  @Test
+  public void testLocaleIllformedExtensionThrows() {
+    JsonSyntaxException e =
+        assertThrows(JsonSyntaxException.class, () -> gson.fromJson("\"en_US_#u\"", Locale.class));
+    assertThat(e).hasMessageThat().isEqualTo("Failed parsing 'en_US_#u' as Locale; at path $");
+  }
+
   @Test
   public void testBigDecimalFieldSerialization() {
     ClassWithBigDecimal target = new ClassWithBigDecimal("-122.01e-21");
