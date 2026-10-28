@@ -44,6 +44,7 @@ import java.util.BitSet;
 import java.util.Calendar;
 import java.util.Currency;
 import java.util.GregorianCalendar;
+import java.util.IllformedLocaleException;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
@@ -940,12 +941,14 @@ public final class TypeAdapters {
             in.nextNull();
             return null;
           }
-          String locale = in.nextString();
-          // Drop the "_#" script/extensions suffix that Locale.toString() may append; it is not
-          // part of the variant. For the JDK's special locales ja_JP_JP and th_TH_TH the
-          // three-argument Locale constructor below restores the extension again
+          String localeString = in.nextString();
+          String locale = localeString;
+          // Separate the "_#" script/extensions suffix that Locale.toString() may append; it is
+          // not part of the variant and is applied separately below
+          String scriptAndExtensions = null;
           int scriptOrExtensionsStart = locale.indexOf("_#");
           if (scriptOrExtensionsStart >= 0) {
+            scriptAndExtensions = locale.substring(scriptOrExtensionsStart + 2);
             locale = locale.substring(0, scriptOrExtensionsStart);
           }
           // Split on "_" keeping empty components, so that the output of Locale.toString() for
@@ -954,7 +957,79 @@ public final class TypeAdapters {
           String language = parts[0];
           String country = parts.length > 1 ? parts[1] : "";
           String variant = parts.length > 2 ? parts[2] : "";
-          return new Locale(language, country, variant);
+          Locale baseLocale = new Locale(language, country, variant);
+          // For the JDK's special locales ja_JP_JP and th_TH_TH the three-argument Locale
+          // constructor already restores the extension, so the base locale is the result
+          if (scriptAndExtensions == null || baseLocale.toString().equals(localeString)) {
+            return baseLocale;
+          }
+          try {
+            return withScriptAndExtensions(language, country, variant, scriptAndExtensions);
+          } catch (IllformedLocaleException e) {
+            throw new JsonSyntaxException(
+                "Failed parsing '" + localeString + "' as Locale; at path " + in.getPreviousPath(),
+                e);
+          }
+        }
+
+        /**
+         * Builds a locale which has the given script and/or extensions, in the format {@link
+         * Locale#toString()} uses after the "_#": either "script", "script_extensions" or
+         * "extensions".
+         */
+        private Locale withScriptAndExtensions(
+            String language, String country, String variant, String scriptAndExtensions) {
+          String script;
+          String extensions;
+          // A script subtag always has 4 characters; an extension always has a '-' after its
+          // singleton, so 4 characters without '-' followed by the end or '_' are the script
+          boolean hasScript =
+              scriptAndExtensions.length() >= 4
+                  && scriptAndExtensions.substring(0, 4).indexOf('-') < 0
+                  && (scriptAndExtensions.length() == 4 || scriptAndExtensions.charAt(4) == '_');
+          if (hasScript) {
+            script = scriptAndExtensions.substring(0, 4);
+            extensions = scriptAndExtensions.length() > 4 ? scriptAndExtensions.substring(5) : "";
+          } else {
+            script = "";
+            extensions = scriptAndExtensions;
+          }
+
+          Locale.Builder builder =
+              new Locale.Builder()
+                  .setLanguage(language)
+                  .setScript(script)
+                  .setRegion(country)
+                  .setVariant(variant);
+
+          if (!extensions.isEmpty()) {
+            String[] subtags = extensions.split("-", -1);
+            int i = 0;
+            while (i < subtags.length) {
+              String singleton = subtags[i];
+              if (singleton.length() != 1) {
+                throw new IllformedLocaleException("Invalid extension singleton: " + singleton);
+              }
+              boolean isPrivateUse = singleton.equalsIgnoreCase("x");
+              int valueStart = i + 1;
+              int valueEnd = valueStart;
+              // The private use extension 'x' extends to the end; other extensions end at the
+              // next singleton subtag
+              while (valueEnd < subtags.length
+                  && (isPrivateUse || subtags[valueEnd].length() != 1)) {
+                valueEnd++;
+              }
+              String value =
+                  String.join("-", Arrays.asList(subtags).subList(valueStart, valueEnd));
+              if (value.isEmpty()) {
+                // Locale.Builder.setExtension would silently remove the extension instead
+                throw new IllformedLocaleException("Empty extension value: " + singleton);
+              }
+              builder.setExtension(singleton.charAt(0), value);
+              i = valueEnd;
+            }
+          }
+          return builder.build();
         }
 
         @Override

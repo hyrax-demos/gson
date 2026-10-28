@@ -376,6 +376,48 @@ public class DefaultTypeAdaptersTest {
     assertThat(locale.getVariant()).isEqualTo("TH");
   }
 
+  /** Uses a locale with a script, zh-Hant-TW, which serializes as "zh_TW_#Hant". */
+  @Test
+  public void testLocaleWithScriptRoundTrip() {
+    Locale target = Locale.forLanguageTag("zh-Hant-TW");
+    String json = gson.toJson(target);
+    assertThat(json).isEqualTo("\"zh_TW_#Hant\"");
+    Locale locale = gson.fromJson(json, Locale.class);
+    assertThat(locale).isEqualTo(target);
+    assertThat(locale.getScript()).isEqualTo("Hant");
+  }
+
+  /** Uses a locale with only a Unicode extension, which serializes as "en_US_#u-ca-buddhist". */
+  @Test
+  public void testLocaleWithExtensionRoundTrip() {
+    Locale target = Locale.forLanguageTag("en-US-u-ca-buddhist");
+    String json = gson.toJson(target);
+    assertThat(json).isEqualTo("\"en_US_#u-ca-buddhist\"");
+    Locale locale = gson.fromJson(json, Locale.class);
+    assertThat(locale).isEqualTo(target);
+    assertThat(locale.getUnicodeLocaleType("ca")).isEqualTo("buddhist");
+  }
+
+  /**
+   * Uses a locale with a script and two extensions, which serializes as
+   * "sr_RS_#Latn_a-foo-u-nu-latn".
+   */
+  @Test
+  public void testLocaleWithScriptAndExtensionsRoundTrip() {
+    Locale target = Locale.forLanguageTag("sr-Latn-RS-a-foo-u-nu-latn");
+    String json = gson.toJson(target);
+    assertThat(json).isEqualTo("\"sr_RS_#Latn_a-foo-u-nu-latn\"");
+    assertThat(gson.fromJson(json, Locale.class)).isEqualTo(target);
+  }
+
+  /** Uses a script/extensions suffix that is not well-formed, "en_US_#u". */
+  @Test
+  public void testLocaleIllformedExtensionThrows() {
+    JsonSyntaxException e =
+        assertThrows(JsonSyntaxException.class, () -> gson.fromJson("\"en_US_#u\"", Locale.class));
+    assertThat(e).hasMessageThat().isEqualTo("Failed parsing 'en_US_#u' as Locale; at path $");
+  }
+
   @Test
   public void testBigDecimalFieldSerialization() {
     ClassWithBigDecimal target = new ClassWithBigDecimal("-122.01e-21");
