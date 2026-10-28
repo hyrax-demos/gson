@@ -941,6 +941,13 @@ public final class TypeAdapters {
             return null;
           }
           String locale = in.nextString();
+          // Drop the "_#" script/extensions suffix that Locale.toString() may append; it is not
+          // part of the variant. For the JDK's special locales ja_JP_JP and th_TH_TH the
+          // three-argument Locale constructor below restores the extension again
+          int scriptOrExtensionsStart = locale.indexOf("_#");
+          if (scriptOrExtensionsStart >= 0) {
+            locale = locale.substring(0, scriptOrExtensionsStart);
+          }
           // Split on "_" keeping empty components, so that the output of Locale.toString() for
           // e.g. Locale.ROOT ("") or a country-only locale ("_US") is parsed back correctly
           String[] parts = locale.split("_", 3);

@@ -348,6 +348,34 @@ public class DefaultTypeAdaptersTest {
     assertThat(gson.fromJson(json, Locale.class)).isEqualTo(target);
   }
 
+  /**
+   * Uses the JDK's special locale ja_JP_JP, whose toString() has a "_#u-ca-japanese" suffix after
+   * the variant.
+   */
+  @Test
+  public void testLocaleJapaneseImperialRoundTrip() {
+    Locale target = new Locale("ja", "JP", "JP");
+    String json = gson.toJson(target);
+    assertThat(json).isEqualTo("\"ja_JP_JP_#u-ca-japanese\"");
+    Locale locale = gson.fromJson(json, Locale.class);
+    assertThat(locale).isEqualTo(target);
+    assertThat(locale.getVariant()).isEqualTo("JP");
+  }
+
+  /**
+   * Uses the JDK's special locale th_TH_TH, whose toString() has a "_#u-nu-thai" suffix after the
+   * variant.
+   */
+  @Test
+  public void testLocaleThaiDigitsRoundTrip() {
+    Locale target = new Locale("th", "TH", "TH");
+    String json = gson.toJson(target);
+    assertThat(json).isEqualTo("\"th_TH_TH_#u-nu-thai\"");
+    Locale locale = gson.fromJson(json, Locale.class);
+    assertThat(locale).isEqualTo(target);
+    assertThat(locale.getVariant()).isEqualTo("TH");
+  }
+
   @Test
   public void testBigDecimalFieldSerialization() {
     ClassWithBigDecimal target = new ClassWithBigDecimal("-122.01e-21");
